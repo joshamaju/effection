@@ -2,6 +2,13 @@ import type { Context, Effect, Operation, Scope } from "./types.ts";
 import { Ok } from "./result.ts";
 import { Do } from "./do.ts";
 
+interface ContextWithBindings<T> extends Context<T> {
+  of(value: T): { context: Context<T>; value: T };
+  from(
+    operation: Operation<T>,
+  ): { context: Context<T>; operation: Operation<T> };
+}
+
 /**
  * Create a new {@link Context}
  *
@@ -23,13 +30,19 @@ import { Do } from "./do.ts";
  * @since 3.0
  */
 export function createContext<T>(name: string, defaultValue?: T): Context<T> {
-  let context: Context<T> = {
+  let context: ContextWithBindings<T> = {
     name,
     defaultValue,
     get: () => Do(Get(context)),
     set: (value) => Do(Set(context, value)),
     expect: () => Do(Expect(context)),
     delete: () => Do(Delete(context)),
+    of(value) {
+      return { context, value };
+    },
+    from(operation) {
+      return { context, operation };
+    },
     *with<R>(value: T, operation: (value: T) => Operation<R>): Operation<R> {
       let scope = yield* Do(UseScope((scope) => scope, "useScope()"));
       let original = scope.hasOwn(context) ? scope.get(context) : undefined;

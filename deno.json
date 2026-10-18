@@ -1,7 +1,15 @@
 {
   "name": "@effection/effection",
   "license": "ISC",
-  "publish": { "include": ["lib", "mod.ts", "experimental.ts", "README.md"] },
+  "publish": {
+    "include": [
+      "lib",
+      "mod.ts",
+      "experimental.ts",
+      "experimental-augment.ts",
+      "README.md"
+    ]
+  },
   "lock": false,
   "tasks": {
     "test": "deno test --allow-run --allow-read --allow-env --allow-ffi",
@@ -11,7 +19,7 @@
   },
   "lint": {
     "rules": { "exclude": ["prefer-const", "require-yield", "ban-types"] },
-    "exclude": ["build", "docs", "tasks", "bench"],
+    "exclude": ["build", "docs", "tasks", "bench", "experimental-augment.ts"],
     "plugins": ["lint/prefer-let.ts"]
   },
   "fmt": { "exclude": ["build", "bench"] },
@@ -29,7 +37,8 @@
   },
   "exports": {
     ".": "./mod.ts",
-    "./experimental": "./experimental.ts"
+    "./experimental": "./experimental.ts",
+    "./experimental/augment": "./experimental-augment.ts"
   },
   "nodeModulesDir": "auto",
   "workspace": [

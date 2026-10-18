@@ -1,10 +1,9 @@
-import type { Operation, RequirementsOf, Yielded } from "./types.ts";
+import type { Operation } from "./types.ts";
 import { Trap, trap } from "./trap.ts";
 import { critical, useCoroutine } from "./coroutine.ts";
 import { createScopeInternal } from "./scope-internal.ts";
 import { Just } from "./maybe.ts";
 import { Err, Ok } from "./result.ts";
-import type { Result } from "./result.ts";
 
 /**
  * Encapsulate an operation so that no effects will persist outside of
@@ -29,26 +28,24 @@ import type { Result } from "./result.ts";
  * @returns the scoped operation
  * @since 3.2
  */
-export function scoped<Child extends Operation<unknown, unknown>>(
-  operation: () => Child,
-): Operation<Yielded<Child>, RequirementsOf<Child>> {
+export function scoped<T>(operation: () => Operation<T>): Operation<T> {
   return {
     [Symbol.iterator]: function* scoped() {
       let routine = yield* useCoroutine();
       let original = routine.scope;
       let [scope, destroy] = createScopeInternal(original);
-      let t = new Trap<Yielded<Child>>(routine);
+      let t = new Trap<T>(routine);
       try {
         routine.scope = scope;
-        t.outcome = Just(Ok(yield* trap(operation)) as Result<Yielded<Child>>);
+        t.outcome = Just(Ok(yield* trap(operation)));
       } catch (error) {
         t.outcome = Just(Err(error));
       } finally {
         routine.scope = original;
         yield* critical(destroy);
         // deno-lint-ignore no-unsafe-finally
-        return (yield t.exit()) as Yielded<Child>;
+        return (yield t.exit()) as T;
       }
     },
-  } as Operation<Yielded<Child>, RequirementsOf<Child>>;
+  };
 }

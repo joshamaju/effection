@@ -1,6 +1,12 @@
-import { all, createContext, provide, resource } from "../mod.ts";
-import type { Operation, Provide, Yielded } from "../mod.ts";
+import { all, createContext, provide, resource } from "../experimental.ts";
+import type { Operation, Provide, Yielded } from "../experimental.ts";
 import { describe, expectType, it } from "./suite.ts";
+
+type StableExports = typeof import("../mod.ts");
+type Assert<T extends true> = T;
+type ProvideIsExperimentalOnly = Assert<
+  "provide" extends keyof StableExports ? false : true
+>;
 
 describe("typed context operations", () => {
   it("infers requirements through delegated yields", () => {

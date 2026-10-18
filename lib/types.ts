@@ -41,8 +41,8 @@ import type { Result } from "./result.ts";
  * See [Operations guide](https://frontside.com/effection/docs/operations) for more information.
  * @since 3.0
  */
-export interface Operation<T, Requires = unknown> {
-  [Symbol.iterator](): Iterator<Effect<unknown, Requires>, T, unknown>;
+export interface Operation<T> {
+  [Symbol.iterator](): Iterator<Effect<unknown>, T, unknown>;
 }
 
 /**
@@ -67,8 +67,7 @@ export interface Operation<T, Requires = unknown> {
  * ```
  * @since 3.0
  */
-export interface Future<T, Requires = unknown>
-  extends Operation<T, Requires>, Promise<T> {}
+export interface Future<T> extends Operation<T>, Promise<T> {}
 
 /**
  * A handle to a concurrently running operation that lets you either use the
@@ -149,7 +148,7 @@ export interface Future<T, Requires = unknown>
  * @see {@link Scope.run}
  * @since 3.0
  */
-export interface Task<T> extends Future<T, unknown> {
+export interface Task<T> extends Future<T> {
   /**
    * Interrupt and shut down a running {@link Operation} and all of its
    * children.
@@ -222,15 +221,11 @@ export type Stream<T, TReturn> = Operation<Subscription<T, TReturn>>;
  * ```
  * @since 3.0
  */
-export interface Context<
-  T,
-  Name extends string = string,
-  HasDefault extends boolean = boolean,
-> {
+export interface Context<T> {
   /**
    * A unique identifier for this context.
    */
-  name: Name;
+  name: string;
   /**
    * The value returned by this context when it is not present on a scop.e
    */
@@ -242,7 +237,7 @@ export interface Context<
    * @returns an operation that yields the current value if it exists, or undefined otherwise.
    * @see {@link Scope#get} for reading a context value outside of a running operation
    */
-  get(): Operation<T | undefined, never>;
+  get(): Operation<T | undefined>;
 
   /**
    * Set the value of a context on the current scope. It will not effect the value of its
@@ -251,7 +246,7 @@ export interface Context<
    * @returns an operation yielding the value being set
    * @see {@link Scope#set} for setting a context value outside of a running operation
    */
-  set(value: T): Operation<T, never>;
+  set(value: T): Operation<T>;
 
   /**
    * Read the current value of the context or fail if it does not exist
@@ -259,7 +254,7 @@ export interface Context<
    * @returns an operation that yields the context value
    * @see {@link Scope#expect} for reading a required context value outside of a running operation
    */
-  expect(): Operation<T, HasDefault extends true ? never : Name>;
+  expect(): Operation<T>;
 
   /**
    * Remove a context value from the current scope. This will only effect the current scope and
@@ -267,7 +262,7 @@ export interface Context<
    *
    * @returns true if the value existed uniquely on this scope.
    */
-  delete(): Operation<boolean, never>;
+  delete(): Operation<boolean>;
 
   /**
    * Evaluate an operation using `value` for the context. Once the operation is completed, the context
@@ -283,42 +278,8 @@ export interface Context<
    *
    * @returns the result of evaluating the operation.
    */
-  with<Child extends Operation<unknown, unknown>>(
-    value: T,
-    operation: (value: T) => Child,
-  ): Operation<Yielded<Child>, Exclude<RequirementsOf<Child>, Name>>;
-
-  /** Create a binding for an already-available context value. */
-  of(value: T): ContextBinding<T, Name, never>;
-
-  /** Create a binding whose value is produced by an operation. */
-  from<Provider extends Operation<T, unknown>>(
-    provider: Provider,
-  ): ContextBinding<T, Name, Provider>;
+  with<R>(value: T, operation: (value: T) => Operation<R>): Operation<R>;
 }
-
-export interface ValueBinding<Value, Name extends string> {
-  readonly context: Context<Value, Name>;
-  readonly value: Value;
-}
-
-export interface OperationBinding<
-  Value,
-  Name extends string,
-  Provider extends Operation<Value, unknown>,
-> {
-  readonly context: Context<Value, Name>;
-  readonly operation: Provider;
-}
-
-/** A value or operation that can be installed by `provide()`. */
-export type ContextBinding<
-  Value,
-  Name extends string,
-  Provider extends Operation<Value, unknown> = Operation<Value, never>,
-> =
-  | ValueBinding<Value, Name>
-  | OperationBinding<Value, Name, Provider>;
 
 /**
  * A programatic API to interact with an Effection scope from outside of an
@@ -585,26 +546,12 @@ export type Around<Api> = {
 export type Yielded<T extends Operation<unknown>> = T extends
   Operation<infer TYield> ? TYield : never;
 
-/**
- * Context requirements carried by an operation. `unknown` is the legacy
- * untracked form used by one-parameter `Operation<T>` annotations.
- */
-type EffectRequirements<E> = E extends {
-  readonly __requirements?: infer Requires;
-} ? unknown extends Requires ? never : Requires
-  : never;
-
-export type RequirementsOf<T> = T extends Iterable<infer E>
-  ? EffectRequirements<E>
-  : never;
-
 // low-level private apis.
 
 /**
  * @ignore
  */
-export interface Effect<T, Requires = never> {
-  readonly __requirements?: Requires;
+export interface Effect<T> {
   description: string;
   enter(
     resolve: Resolve<Result<T>>,
@@ -626,9 +573,9 @@ export interface Coroutine<T = unknown> {
     resumeWith: Result<unknown>;
   };
   resume(result: Result<unknown>): void;
-  step(): IteratorResult<Effect<unknown, unknown>, T>;
+  step(): IteratorResult<Effect<unknown>, T>;
   unwind(): void;
-  perform(effect: Effect<unknown, unknown>): void;
+  perform(effect: Effect<unknown>): void;
   settle(outcome: Maybe<Result<T>>): void;
 }
 
